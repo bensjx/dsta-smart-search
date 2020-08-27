@@ -53,6 +53,7 @@ dependencies:
   - pip:
     - dash-core-components==1.11.0
     - dash-renderer==1.7.0
+    - gunicorn==20.0.4
     - numpy==1.19.1
     - pandas==1.1.1
     - python-dateutil==2.8.1

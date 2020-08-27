@@ -24,7 +24,7 @@ app.title = "DSTA Smart Search System"
 
 app_name = "DSTA Smart Search System"
 
-# server = app.server # for deployment
+server = app.server  # for deployment
 
 
 # Navigation bar
