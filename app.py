@@ -72,7 +72,7 @@ searchTab = html.Div(
             style={
                 "marginTop": -20,
                 "marginLeft": 10,
-                "width": "80%",
+                # "width": "80%",
                 # "display": "inline-block",
             },
         ),
