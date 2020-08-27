@@ -9,7 +9,7 @@ certifi==2020.6.20
 click==7.1.2
 colorama==0.4.3
 dash 
-dash-bootstrap-components @
+dash-bootstrap-components
 dash-core-components==1.11.0
 dash-html-components==1.0.3
 dash-renderer==1.7.0
