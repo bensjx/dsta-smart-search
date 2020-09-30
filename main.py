@@ -190,7 +190,7 @@ navbar = dbc.Navbar(
                 [
                     dbc.Col(
                         dbc.NavbarBrand(
-                            "DSTA Smart Search Systllaem",
+                            "DSTA Smart Search System",
                             className="ml-auto",
                             style={"font-size": 30},
                         )
