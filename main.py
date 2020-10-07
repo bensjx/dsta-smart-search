@@ -3,14 +3,15 @@ import pandas as pd
 import numpy as np
 import json
 import pprint
-import datetime
+from datetime import datetime
 import random
 import os
 import time
 import regex as re
 
-# Torch + Huggingface
+# # Torch + Huggingface
 import torch
+
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from transformers import (
     AlbertConfig,
@@ -18,6 +19,7 @@ from transformers import (
     AlbertTokenizer,
     squad_convert_examples_to_features,
 )
+
 from transformers.data.processors.squad import (
     SquadResult,
     SquadExample,
@@ -190,7 +192,7 @@ navbar = dbc.Navbar(
                 [
                     dbc.Col(
                         dbc.NavbarBrand(
-                            "DSTA Smart Search Systllaem",
+                            "DSTA Smart Search System",
                             className="ml-auto",
                             style={"font-size": 30},
                         )
@@ -211,6 +213,10 @@ navbar = dbc.Navbar(
 # Search tab
 searchTab = html.Div(
     children=[
+        html.P(
+            "This application is gpu enabled: "
+            + ("True" if torch.cuda.is_available() else "False")
+        ),
         # Category box
         html.H3("Step 1: Please select your category"),
         html.Div(
@@ -308,7 +314,7 @@ app.layout = html.Div(
 )
 # retrieve query
 def search(n_clicks, cat_val, text_val):
-
+    startTime = datetime.now()
     # Prepare inputs for prediction
     idx = 0
     questions = [text_val]
@@ -333,22 +339,44 @@ def search(n_clicks, cat_val, text_val):
     for key in predictions.keys():
         answers.append(predictions[key])
 
-    # Retrieve documents and highlight answers
-    documents_df, answers_df = [], []  # Create 2 lists to house answers and documents
-    for (
-        ans
-    ) in (
-        answers
-    ):  # Retrieve documents for all the answers. Usually we only have 1 answer
-        for i in range(len(data[idx]["paragraphs"])):
-            ctx = data[idx]["paragraphs"][i]["context"]
-            if re.search(ans, ctx):
-                answers_df.append(ans)
-                documents_df.append(
-                    str(re.sub(ans, "**" + ans + "**", ctx))
-                )  # Use markdown to bold the answer
+    if answers[0] == "":  # Invalid questions
+        df = pd.DataFrame(
+            {
+                "Answers": ["Invalid question", ""],
+                "Documents": [
+                    "Invalid question",
+                    "This query was completed in: "
+                    + str((datetime.now() - startTime).total_seconds())
+                    + "s.",
+                ],
+            }
+        )
+    else:
+        # Retrieve documents and highlight answers
+        documents_df, answers_df = (
+            [],
+            [],
+        )  # Create 2 lists to house answers and documents
+        for (
+            ans
+        ) in (
+            answers
+        ):  # Retrieve documents for all the answers. Usually we only have 1 answer
+            for i in range(len(data[idx]["paragraphs"])):
+                ctx = data[idx]["paragraphs"][i]["context"]
+                if re.search(ans, ctx):
+                    answers_df.append(ans)
+                    documents_df.append(
+                        str(re.sub(ans, "**" + ans + "**", ctx))
+                    )  # Use markdown to bold the answer
+        documents_df.append(
+            "This query was completed in: "
+            + str((datetime.now() - startTime).total_seconds())
+            + "s."
+        )
+        answers_df.append("")
 
-    df = pd.DataFrame({"Answers": answers_df, "Documents": documents_df})
+        df = pd.DataFrame({"Answers": answers_df, "Documents": documents_df})
 
     output = dash_table.DataTable(
         id="dash_tb",
@@ -392,4 +420,6 @@ def search(n_clicks, cat_val, text_val):
 """ End of Callbacks"""
 
 if __name__ == "__main__":
-    app.run_server(debug=True)  # change debug to true when developing
+    # app.run_server(debug=True)  # change debug to true when developing
+    app.run_server(host="0.0.0.0", port=80)
+
