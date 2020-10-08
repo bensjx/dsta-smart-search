@@ -328,8 +328,8 @@ def search(n_clicks, cat_val, text_val):
     for i in range(len(data[idx]["paragraphs"])):
         context += data[idx]["paragraphs"][i]["context"]
 
-    # Debug, to be overwritten when GPU is sourced
-    context = data[idx]["paragraphs"][50]["context"]
+    # # Debug, to be overwritten when GPU is sourced
+    # context = data[idx]["paragraphs"][50]["context"]
 
     # Run prediction
     predictions = run_prediction(questions, context)
