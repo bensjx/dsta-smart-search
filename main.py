@@ -291,10 +291,7 @@ app.layout = html.Div(
     [
         navbar,
         dbc.Tabs(
-            [
-                dbc.Tab(searchTab, id="label_tab1", label="Smart Search"),
-                dbc.Tab(faqTab, id="label_tab2", label="FAQ"),
-            ],
+            [dbc.Tab(searchTab, id="label_tab1", label="Smart Search")],
             style={"font-size": 20, "background-color": "#b9d9eb"},
         ),
     ],
@@ -333,6 +330,7 @@ def search(n_clicks, cat_val, text_val):
 
     # Run prediction
     predictions = run_prediction(questions, context)
+    endTimePred = datetime.now()
 
     # Return results
     answers = []
@@ -369,12 +367,17 @@ def search(n_clicks, cat_val, text_val):
                     documents_df.append(
                         str(re.sub(ans, "**" + ans + "**", ctx))
                     )  # Use markdown to bold the answer
-        documents_df.append(
-            "This query was completed in: "
-            + str((datetime.now() - startTime).total_seconds())
-            + "s."
+        documents_df.extend(
+            [
+                "The answers were generated in: "
+                + str((endTimePred - startTime).total_seconds())
+                + "s.",
+                "This documents were retrieved in: "
+                + str((datetime.now() - endTimePred).total_seconds())
+                + "s.",
+            ]
         )
-        answers_df.append("")
+        answers_df.extend(["", ""])
 
         df = pd.DataFrame({"Answers": answers_df, "Documents": documents_df})
 
