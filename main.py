@@ -8,6 +8,9 @@ import random
 import os
 import time
 import regex as re
+import base64
+import PyPDF2
+import io
 
 # # Torch + Huggingface
 import torch
@@ -46,8 +49,8 @@ app_name = "DSTA Smart Search System"
 server = app.server  # for deployment
 
 """ Config """
-
-# Training data
+# Documents
+# You could replace this data with your own documents
 f = open("data/train-v2.0.json")
 data = json.load(f)["data"]
 
@@ -59,9 +62,9 @@ null_score_diff_threshold = 0.0
 
 # Setup model
 use_own_model = False
-if use_own_model:
+if use_own_model:  # For use if you have your own pre-trained model
     model_name_or_path = "/content/model_output"
-else:
+else:  # Obtain model from huggingface library https://huggingface.co/models
     model_name_or_path = "ktrapeznikov/albert-xlarge-v2-squad-v2"
 
 config_class, model_class, tokenizer_class = (
@@ -180,6 +183,35 @@ def run_prediction(question_texts, context_text):
     return predictions
 
 
+# To parse custom uploaded files in tab 3
+def parse_contents(contents, filename, date):
+    content_type, content_string = contents.split(",")
+
+    decoded = base64.b64decode(content_string)
+
+    try:
+        if "pdf" in filename:
+            # Assume that the user uploaded a PDF file
+            pdf = PyPDF2.PdfFileReader(io.BytesIO(decoded))
+        # elif 'csv' in filename:
+        #     # Assume that the user uploaded a CSV file
+        #     df = pd.read_csv(
+        #         io.StringIO(decoded.decode('utf-8')))
+        # elif 'xls' in filename:
+        #     # Assume that the user uploaded an excel file
+        #     df = pd.read_excel(io.BytesIO(decoded))
+    except Exception as e:
+        print(e)
+        return html.Div(["There was an error processing this file."])
+
+    result = ""
+
+    for pages in range(pdf.getNumPages()):
+        result += pdf.getPage(pages).extractText().replace("\n", "").replace("\\", "")
+
+    return result
+
+
 """ End of Helper Functions """
 
 
@@ -210,8 +242,8 @@ navbar = dbc.Navbar(
     style={"width": "100%"},
 )
 
-# Search tab
-searchTab = html.Div(
+### SQuAD 2.0 tab
+squadTab = html.Div(
     children=[
         html.P(
             "This application is gpu enabled: "
@@ -270,20 +302,136 @@ searchTab = html.Div(
     },
 )
 
-# FAQ Tab
-faqTab = html.Div(
+### Custom context tab
+contextTab = html.Div(
     children=[
-        html.H3("Top 10 Questions"),
-        html.Div(
-            html.H3("Work in progress"),
-            style={
-                "marginTop": -20,
-                "marginLeft": 10,
-                "width": "80%",
-                # "display": "inline-block",
-            },
+        html.P(
+            "This application is gpu enabled: "
+            + ("True" if torch.cuda.is_available() else "False")
         ),
-    ]
+        # Context box
+        html.H3("Step 1: Please input your custom context"),
+        dbc.Textarea(
+            id="text_custom_context",
+            className="mb-3",
+            placeholder="e.g. Computational complexity theory focuses on classifying computational problems according to their resource usage, and relating these classes to each other. A computational problem is a task solved by a computer. A computation problem is solvable by mechanical application of mathematical steps, such as an algorithm.",
+        ),
+        # Query box
+        html.H3("Step 2: Please input your query"),
+        dbc.Textarea(
+            id="text_search_context",
+            className="mb-3",
+            placeholder="e.g. What is computational complexity principle?",
+        ),
+        # Search button
+        html.H3("Step 3: Click the search button to generate results"),
+        html.Button(
+            "Search",
+            id="button_search_context",
+            className="btn btn-success btn-lg btn-block",
+        ),
+        html.Br(),
+        # Output table
+        html.H3("Step 4: Results"),
+        dcc.Loading(  # add loading animation
+            children=[
+                html.Div(
+                    id="output_search_table_context",
+                    style={
+                        "marginTop": 20,
+                        "marginLeft": 10,
+                        "width": "80%",
+                        # "display": "inline-block",
+                    },
+                )
+            ],
+            type="graph",
+            fullscreen=False,
+        ),
+        # Some blank rows
+        html.Br(),
+        html.Br(),
+    ],
+    style={
+        "marginLeft": 40,
+        "width": "80%",
+        # "display": "inline-block",
+    },
+)
+
+### Custom input file tab
+fileTab = html.Div(
+    children=[
+        html.P(
+            "This application is gpu enabled: "
+            + ("True" if torch.cuda.is_available() else "False")
+        ),
+        # File upload box
+        html.H3("Step 1: Please upload your documents (only PDF files are accepted)"),
+        html.Div(
+            [
+                dcc.Upload(
+                    id="upload_document",
+                    children=html.Div(["Drag and Drop or ", html.A("Select Files")]),
+                    style={
+                        "width": "100%",
+                        "height": "60px",
+                        "lineHeight": "60px",
+                        "borderWidth": "1px",
+                        "borderStyle": "dashed",
+                        "borderRadius": "5px",
+                        "textAlign": "center",
+                        "margin": "10px",
+                    },
+                    # Allow multiple files to be uploaded
+                    multiple=True,
+                ),
+            ]
+        ),
+        # Confirmation of file names
+        html.H3("Step 1.5: Please wait for your file names to be listed below"),
+        dbc.Spinner(children=[html.Div(id="document_confirmation")]),
+        # Query box
+        html.H3("Step 2: Please input your query"),
+        dbc.Textarea(
+            id="text_search_file",
+            className="mb-3",
+            placeholder="e.g. What is computational complexity principle?",
+        ),
+        # Search button
+        html.H3("Step 3: Click the search button to generate results"),
+        html.Button(
+            "Search",
+            id="button_search_file",
+            className="btn btn-success btn-lg btn-block",
+        ),
+        html.Br(),
+        # Output table
+        html.H3("Step 4: Results"),
+        dcc.Loading(  # add loading animation
+            children=[
+                html.Div(
+                    id="output_search_table_file",
+                    style={
+                        "marginTop": 20,
+                        "marginLeft": 10,
+                        "width": "80%",
+                        # "display": "inline-block",
+                    },
+                )
+            ],
+            type="graph",
+            fullscreen=False,
+        ),
+        # Some blank rows
+        html.Br(),
+        html.Br(),
+    ],
+    style={
+        "marginLeft": 40,
+        "width": "80%",
+        # "display": "inline-block",
+    },
 )
 
 # Layout of entire app
@@ -291,7 +439,11 @@ app.layout = html.Div(
     [
         navbar,
         dbc.Tabs(
-            [dbc.Tab(searchTab, id="label_tab1", label="Smart Search")],
+            [
+                dbc.Tab(squadTab, id="label_tab1", label="SQuAD 2.0"),
+                dbc.Tab(contextTab, id="label_tab2", label="Custom Context"),
+                dbc.Tab(fileTab, id="label_tab3", label="Custom Input File"),
+            ],
             style={"font-size": 20, "background-color": "#b9d9eb"},
         ),
     ],
@@ -300,7 +452,7 @@ app.layout = html.Div(
 """ End of Front End"""
 
 """ Callbacks"""
-# For searchTab
+### For squadTab
 @app.callback(
     Output("output_search_table", "children"),  # output results in table
     [Input("button_search", "n_clicks")],  # upon clicking search button
@@ -401,23 +553,217 @@ def search(n_clicks, cat_val, text_val):
     return output
 
 
-# For faqTab
-# @app.callback(
-#     Output("output_faq_table", "children"),  # output results in table
-#     # [Input("button_search", "n_clicks")],  # upon clicking search button
-#     # [State("text_search", "value")],
-# )  # retrieve query
-# def faq():
-#     # model = bla
-#     # pred = bla
-#     df = pd.DataFrame({"Results": ["bla bla bla"] * 10})
-#     output = dash_table.DataTable(
-#         id="dash_tb",
-#         columns=[{"name": "Results", "id": "Results"}],
-#         data=df.to_dict("records"),
-#         style_header={"display": "none"},
-#         style_data={"whiteSpace": "normal", "height": "auto", "textAlign": "left",},
-#     )
+### For contextTab
+@app.callback(
+    Output("output_search_table_context", "children"),  # output results in table
+    [Input("button_search_context", "n_clicks")],
+    state=[  # upon clicking search button
+        State("text_custom_context", "value"),  # Custom context
+        State("text_search_context", "value"),
+    ],  # Input query
+)
+# retrieve query
+def search(n_clicks, context_val, question_val):
+    startTime = datetime.now()
+
+    # Prepare inputs for prediction
+    question = [str(question_val)]
+    context = str(context_val)
+
+    # Run prediction
+    predictions = run_prediction(question, context)
+    endTimePred = datetime.now()
+
+    # Return results
+    answers = []
+    for key in predictions.keys():
+        answers.append(predictions[key])
+
+    if answers[0] == "":  # Invalid questions
+        df = pd.DataFrame(
+            {
+                "Answers": ["Invalid question", ""],
+                "Documents": [
+                    "Invalid question",
+                    "This query was completed in: "
+                    + str((endTimePred - startTime).total_seconds())
+                    + "s.",
+                ],
+            }
+        )
+    else:
+        # Retrieve documents and highlight answers
+        documents_df, answers_df = (
+            [],
+            [],
+        )  # Create 2 lists to house answers and documents
+        for (
+            ans
+        ) in (
+            answers
+        ):  # Retrieve documents for all the answers. Usually we only have 1 answer
+            ctx = context
+            if re.search(ans, ctx):  # If answer is found in the context provided
+                answers_df.append(ans)
+                documents_df.append(
+                    str(re.sub(ans, "**" + ans + "**", ctx))
+                )  # Use markdown to bold the answer
+        documents_df.append(
+            "The answers were generated in: "
+            + str((endTimePred - startTime).total_seconds())
+            + "s."
+        )
+        answers_df.append("")
+
+        df = pd.DataFrame({"Answers": answers_df, "Documents": documents_df})
+
+    output = dash_table.DataTable(
+        id="dash_tb",
+        columns=[{"name": i, "id": i, "presentation": "markdown",} for i in df.columns],
+        data=df.to_dict("records"),
+        style_header={
+            "fontWeight": "bold",
+            "backgroundColor": "rgb(30, 30, 30)",
+            "color": "white",
+            "font-size": 20,
+        },
+        style_cell={
+            "whiteSpace": "normal",
+            "height": "auto",
+            "textAlign": "left",
+            "maxWidth": 1080,
+        },
+    )
+    return output
+
+
+### For fileTab
+@app.callback(
+    Output("output_search_table_file", "children"),  # output results in table
+    [
+        Input("button_search_file", "n_clicks"),
+        Input("upload_document", "contents"),
+    ],  # upon clicking search button and uploading file
+    state=[
+        State("upload_document", "filename"),
+        State("upload_document", "last_modified"),
+        State("text_search_file", "value"),
+    ],
+)
+# retrieve query
+def search(n_clicks, list_of_contents, list_of_names, list_of_dates, text_val):
+    startTime = datetime.now()
+
+    # Prepare inputs for prediction
+    questions = [text_val]
+    context = ""
+    contexts = []
+
+    # Retrieve all the contexts by parsing the pdf
+    if list_of_contents is not None:
+        contexts = [
+            parse_contents(c, n, d)
+            for c, n, d in zip(list_of_contents, list_of_names, list_of_dates)
+        ]
+
+    # Loop through all the documents and merge all texts
+    for ctx in contexts:
+        context += ctx
+
+    # Run prediction
+    predictions = run_prediction(questions, context)
+    endTimePred = datetime.now()
+
+    # Return results
+    answers = []
+    for key in predictions.keys():
+        answers.append(predictions[key])
+
+    if answers[0] == "":  # Invalid questions
+        df = pd.DataFrame(
+            {
+                "Answers": ["Invalid question", ""],
+                "Documents": [
+                    "Invalid question",
+                    "This query was completed in: "
+                    + str((endTimePred - startTime).total_seconds())
+                    + "s.",
+                ],
+            }
+        )
+    else:
+        # Retrieve documents and highlight answers
+        documents_df, answers_df = (
+            [],
+            [],
+        )  # Create 2 lists to house answers and documents
+        for (
+            ans
+        ) in (
+            answers
+        ):  # Retrieve documents for all the answers. Usually we only have 1 answer
+            for i in range(len(contexts)):  # loop through all contexts
+                ctx = contexts[i]
+                filename = list_of_names[i]
+                if re.search(ans, ctx):
+                    answers_df.append(ans)
+                    documents_df.append(
+                        "**"
+                        + filename
+                        + ":** "
+                        + str(re.sub(ans, "**" + ans + "**", ctx))
+                    )  # Use markdown to bold the answer
+        documents_df.extend(
+            [
+                "The answers were generated in: "
+                + str((endTimePred - startTime).total_seconds())
+                + "s.",
+                "This documents were retrieved in: "
+                + str((datetime.now() - endTimePred).total_seconds())
+                + "s.",
+            ]
+        )
+        answers_df.extend(["", ""])
+
+        df = pd.DataFrame({"Answers": answers_df, "Documents": documents_df})
+
+    output = dash_table.DataTable(
+        id="dash_tb",
+        columns=[{"name": i, "id": i, "presentation": "markdown",} for i in df.columns],
+        data=df.to_dict("records"),
+        style_header={
+            "fontWeight": "bold",
+            "backgroundColor": "rgb(30, 30, 30)",
+            "color": "white",
+            "font-size": 20,
+        },
+        style_cell={
+            "whiteSpace": "normal",
+            "height": "auto",
+            "textAlign": "left",
+            "maxWidth": 1080,
+        },
+    )
+    return output
+
+
+### For fileTab
+@app.callback(
+    Output("document_confirmation", "children"),  # output results in table
+    [Input("upload_document", "contents"),],
+    state=[
+        State("upload_document", "filename"),
+        State("upload_document", "last_modified"),
+    ],
+)
+# retrieve query
+def search(list_of_contents, list_of_names, list_of_dates):
+    contexts = [
+        parse_contents(c, n, d)
+        for c, n, d in zip(list_of_contents, list_of_names, list_of_dates)
+    ]
+    return html.Ul([html.Li(names) for names in list_of_names])
+
 
 #     return output
 """ End of Callbacks"""

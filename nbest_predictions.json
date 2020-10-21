@@ -1,16 +1,16 @@
 {
     "0": [
         {
-            "text": "Artist of the Decade",
-            "probability": 0.999956793032443,
-            "start_logit": 5.066813945770264,
-            "end_logit": 5.563450813293457
+            "text": "The first iPhone was released in 2007",
+            "probability": 0.9974569101861746,
+            "start_logit": 3.359882116317749,
+            "end_logit": 3.1527814865112305
         },
         {
             "text": "",
-            "probability": 4.320696755708735e-05,
-            "start_logit": 0.3884136974811554,
-            "end_logit": 0.1923854798078537
+            "probability": 0.002543089813825388,
+            "start_logit": 0.37075406312942505,
+            "end_logit": 0.17008039355278015
         }
     ]
 }
