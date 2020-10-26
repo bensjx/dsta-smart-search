@@ -280,12 +280,7 @@ squadTab = html.Div(
             children=[
                 html.Div(
                     id="output_search_table",
-                    style={
-                        "marginTop": 20,
-                        "marginLeft": 10,
-                        "width": "80%",
-                        # "display": "inline-block",
-                    },
+                    style={"marginTop": 20, "marginLeft": 10, "width": "6%",},
                 )
             ],
             type="graph",
@@ -295,11 +290,7 @@ squadTab = html.Div(
         html.Br(),
         html.Br(),
     ],
-    style={
-        "marginLeft": 40,
-        "width": "80%",
-        # "display": "inline-block",
-    },
+    style={"marginLeft": 20, "width": "90%",},
 )
 
 ### Custom context tab
@@ -337,12 +328,7 @@ contextTab = html.Div(
             children=[
                 html.Div(
                     id="output_search_table_context",
-                    style={
-                        "marginTop": 20,
-                        "marginLeft": 10,
-                        "width": "80%",
-                        # "display": "inline-block",
-                    },
+                    style={"marginTop": 20, "marginLeft": 10, "width": "100%",},
                 )
             ],
             type="graph",
@@ -352,11 +338,7 @@ contextTab = html.Div(
         html.Br(),
         html.Br(),
     ],
-    style={
-        "marginLeft": 40,
-        "width": "80%",
-        # "display": "inline-block",
-    },
+    style={"marginLeft": 20, "width": "90%",},
 )
 
 ### Custom input file tab
@@ -412,12 +394,7 @@ fileTab = html.Div(
             children=[
                 html.Div(
                     id="output_search_table_file",
-                    style={
-                        "marginTop": 20,
-                        "marginLeft": 10,
-                        "width": "80%",
-                        # "display": "inline-block",
-                    },
+                    style={"marginTop": 20, "marginLeft": 10, "width": "100%",},
                 )
             ],
             type="graph",
@@ -427,11 +404,7 @@ fileTab = html.Div(
         html.Br(),
         html.Br(),
     ],
-    style={
-        "marginLeft": 40,
-        "width": "80%",
-        # "display": "inline-block",
-    },
+    style={"marginLeft": 20, "width": "90%",},
 )
 
 # Layout of entire app
@@ -529,7 +502,9 @@ def search(n_clicks, cat_val, text_val):
                 + "s.",
             ]
         )
-        answers_df.extend(["", ""])
+        answers_df.extend(
+            ["", "",]
+        )
 
         df = pd.DataFrame({"Answers": answers_df, "Documents": documents_df})
 
@@ -547,7 +522,7 @@ def search(n_clicks, cat_val, text_val):
             "whiteSpace": "normal",
             "height": "auto",
             "textAlign": "left",
-            "maxWidth": 1080,
+            "maxWidth": 700,
         },
     )
     return output
@@ -631,7 +606,7 @@ def search(n_clicks, context_val, question_val):
             "whiteSpace": "normal",
             "height": "auto",
             "textAlign": "left",
-            "maxWidth": 1080,
+            "maxWidth": 700,
         },
     )
     return output
@@ -741,7 +716,7 @@ def search(n_clicks, list_of_contents, list_of_names, list_of_dates, text_val):
             "whiteSpace": "normal",
             "height": "auto",
             "textAlign": "left",
-            "maxWidth": 1080,
+            "maxWidth": 700,
         },
     )
     return output
@@ -758,11 +733,14 @@ def search(n_clicks, list_of_contents, list_of_names, list_of_dates, text_val):
 )
 # retrieve query
 def search(list_of_contents, list_of_names, list_of_dates):
-    contexts = [
-        parse_contents(c, n, d)
-        for c, n, d in zip(list_of_contents, list_of_names, list_of_dates)
-    ]
-    return html.Ul([html.Li(names) for names in list_of_names])
+    if list_of_contents:
+        contexts = [
+            parse_contents(c, n, d)
+            for c, n, d in zip(list_of_contents, list_of_names, list_of_dates)
+        ]
+        return html.Ul([html.Li(names) for names in list_of_names])
+    else:
+        return ""
 
 
 #     return output
