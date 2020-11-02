@@ -51,29 +51,29 @@ dependencies:
   - yaml=0.2.5=he774522_0
   - zlib=1.2.11=h62dcd97_4
   - pip:
-      - chardet==3.0.4
-      - dash-core-components==1.11.0
-      - dash-renderer==1.7.0
-      - dataclasses==0.7
-      - filelock==3.0.12
-      - gunicorn==20.0.4
-      - idna==2.10
-      - joblib==0.16.0
-      - numpy==1.19.1
-      - packaging==20.4
-      - pandas==1.1.1
-      - pillow==7.2.0
-      - pyparsing==2.4.7
-      - python-dateutil==2.8.1
-      - pytz==2020.1
-      - requests==2.24.0
-      - sacremoses==0.0.43
-      - sentencepiece==0.1.91
-      - tokenizers==0.8.1rc2
-      - torch==1.6.0
-      - torchvision==0.7.0
-      - tqdm==4.49.0
-      - transformers==3.2.0
-      - tensorflow
-      - urllib3==1.25.10
+    - chardet==3.0.4
+    - dash-core-components==1.11.0
+    - dash-renderer==1.7.0
+    - dataclasses==0.7
+    - filelock==3.0.12
+    - gunicorn==20.0.4
+    - idna==2.10
+    - joblib==0.16.0
+    - numpy==1.19.1
+    - packaging==20.4
+    - pandas==1.1.1
+    - pillow==7.2.0
+    - pyparsing==2.4.7
+    - pypdf2==1.26.0
+    - python-dateutil==2.8.1
+    - pytz==2020.1
+    - requests==2.24.0
+    - sacremoses==0.0.43
+    - sentencepiece==0.1.91
+    - tokenizers==0.8.1rc2
+    - torch==1.6.0
+    - torchvision==0.7.0
+    - tqdm==4.49.0
+    - transformers==3.2.0
+    - urllib3==1.25.10
 prefix: C:\Users\renel\Anaconda3\envs\dsta-ss

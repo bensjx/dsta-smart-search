@@ -1,17 +1,19 @@
+# For a GPU-enabled application
 FROM tensorflow/tensorflow:2.1.0-gpu-py3
 
-# For more information, please refer to https://aka.ms/vscode-docker-python
-# FROM python:3.8-slim-buster
+# Upgrade pip
 RUN pip3 install --upgrade pip
 
 # Install pip requirements
 ADD requirements.txt .
 RUN pip install -r requirements.txt
 
+# Set path
 WORKDIR /app
 ADD . /app
 
+# Application can be accessed from localhost:80
 EXPOSE 80
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
+# Run "python main.py" which starts our application
 CMD ["python", "main.py"]
