@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 import json
-import pprint
 from datetime import datetime
 import random
 import os
@@ -14,8 +13,8 @@ import io
 
 # # Torch + Huggingface
 import torch
-
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+
 from transformers import (
     AlbertConfig,
     AlbertForQuestionAnswering,
@@ -36,9 +35,7 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_table
 from dash.dependencies import Input, Output, State
-import plotly.graph_objs as go
 import plotly
-import plotly.express as px
 
 app = dash.Dash(external_stylesheets=[dbc.themes.CERULEAN])
 
@@ -101,12 +98,22 @@ def load_cat_data():
     return result
 
 
+# Function for runnning questions and answering prediction
 def to_list(tensor):
     return tensor.detach().cpu().tolist()
 
 
+# Function for runnning questions and answering prediction
 def run_prediction(question_texts, context_text):
-    """Setup function to compute predictions"""
+    """
+    Modified from run_squad.py to only produce predicted answer given the question and context
+
+    Input: 
+        1. List of questions
+        2. Context
+    Output: 
+        1. Predicted answer
+    """
     examples = []
 
     for i, question_text in enumerate(question_texts):
@@ -183,9 +190,108 @@ def run_prediction(question_texts, context_text):
     return predictions
 
 
+# This function is unused. It could be used to produce multiple answers for 1 context and 1 question
+def run_prediction_multi(question_texts, context_texts):
+    """
+    Modified from run_squad.py to only produce predicted answer given the question and context.
+    This  function will produce multiple answers by splitting the context into paragraphs
+
+    Input: 
+        1. List of questions
+        2. List of Context
+    Output: 
+        1. Predicted answer
+    """
+    examples = []
+
+    for i, question_text in enumerate(question_texts):
+        for j, context_text in enumerate(context_texts):
+            example = SquadExample(
+                qas_id=str(i) + str(j),
+                question_text=question_text,
+                context_text=context_text,
+                answer_text=None,
+                start_position_character=None,
+                title="Predict",
+                is_impossible=False,
+                answers=None,
+            )
+
+            examples.append(example)
+    features, dataset = squad_convert_examples_to_features(
+        examples=examples,
+        tokenizer=tokenizer,
+        max_seq_length=384,
+        doc_stride=128,
+        max_query_length=64,
+        is_training=False,
+        return_dataset="pt",
+        threads=1,
+    )
+    eval_sampler = SequentialSampler(dataset)
+    eval_dataloader = DataLoader(dataset, sampler=eval_sampler, batch_size=10)
+    all_results = []
+
+    for batch in eval_dataloader:
+        model.eval()
+        batch = tuple(t.to(device) for t in batch)
+
+        with torch.no_grad():
+            inputs = {
+                "input_ids": batch[0],
+                "attention_mask": batch[1],
+                "token_type_ids": batch[2],
+            }
+
+            example_indices = batch[3]
+
+            outputs = model(**inputs)
+
+            for i, example_index in enumerate(example_indices):
+                eval_feature = features[example_index.item()]
+                unique_id = int(eval_feature.unique_id)
+
+                output = [to_list(output[i]) for output in outputs]
+
+                start_logits, end_logits = output
+                result = SquadResult(unique_id, start_logits, end_logits)
+                all_results.append(result)
+
+    output_prediction_file = "predictions.json"
+    output_nbest_file = "nbest_predictions.json"
+    output_null_log_odds_file = "null_predictions.json"
+
+    predictions = compute_predictions_logits(
+        examples,
+        features,
+        all_results,
+        n_best_size,
+        max_answer_length,
+        do_lower_case,
+        output_prediction_file,
+        output_nbest_file,
+        output_null_log_odds_file,
+        False,  # verbose_logging
+        True,  # version_2_with_negative
+        null_score_diff_threshold,
+        tokenizer,
+    )
+    return predictions
+
+
 # To parse custom uploaded files in tab 3
 def parse_contents(contents, filename, date):
-    content_type, content_string = contents.split(",")
+    """
+    Loads uploaded PDF file into text
+
+    Input: 
+        1. Content of file which is base64 encoded
+        2. File name
+        3. Date of upload
+    Output: 
+        1. String of content of document
+    """
+    _, content_string = contents.split(",")
 
     decoded = base64.b64decode(content_string)
 
@@ -193,13 +299,6 @@ def parse_contents(contents, filename, date):
         if "pdf" in filename:
             # Assume that the user uploaded a PDF file
             pdf = PyPDF2.PdfFileReader(io.BytesIO(decoded))
-        # elif 'csv' in filename:
-        #     # Assume that the user uploaded a CSV file
-        #     df = pd.read_csv(
-        #         io.StringIO(decoded.decode('utf-8')))
-        # elif 'xls' in filename:
-        #     # Assume that the user uploaded an excel file
-        #     df = pd.read_excel(io.BytesIO(decoded))
     except Exception as e:
         print(e)
         return html.Div(["There was an error processing this file."])
@@ -421,7 +520,6 @@ app.layout = html.Div(
         ),
     ],
 )
-
 """ End of Front End"""
 
 """ Callbacks"""
@@ -441,6 +539,7 @@ def search(n_clicks, cat_val, text_val):
     idx = 0
     questions = [text_val]
     context = ""
+
     # Obtain index of the relevant category
     for i in range(len(data)):
         if data[i]["title"] == cat_val:
@@ -531,11 +630,11 @@ def search(n_clicks, cat_val, text_val):
 ### For contextTab
 @app.callback(
     Output("output_search_table_context", "children"),  # output results in table
-    [Input("button_search_context", "n_clicks")],
-    state=[  # upon clicking search button
+    [Input("button_search_context", "n_clicks")],  # upon clicking search button
+    state=[
         State("text_custom_context", "value"),  # Custom context
-        State("text_search_context", "value"),
-    ],  # Input query
+        State("text_search_context", "value"),  # Input query
+    ],
 )
 # retrieve query
 def search(n_clicks, context_val, question_val):
@@ -616,9 +715,11 @@ def search(n_clicks, context_val, question_val):
 @app.callback(
     Output("output_search_table_file", "children"),  # output results in table
     [
-        Input("button_search_file", "n_clicks"),
+        Input(
+            "button_search_file", "n_clicks"
+        ),  # upon clicking search button and uploading file
         Input("upload_document", "contents"),
-    ],  # upon clicking search button and uploading file
+    ],
     state=[
         State("upload_document", "filename"),
         State("upload_document", "last_modified"),
@@ -733,20 +834,17 @@ def search(n_clicks, list_of_contents, list_of_names, list_of_dates, text_val):
 )
 # retrieve query
 def search(list_of_contents, list_of_names, list_of_dates):
-    if list_of_contents:
-        contexts = [
-            parse_contents(c, n, d)
-            for c, n, d in zip(list_of_contents, list_of_names, list_of_dates)
-        ]
-        return html.Ul([html.Li(names) for names in list_of_names])
-    else:
+    if list_of_contents:  # Document upoaded
+        return html.Ul(
+            [html.Li(names) for names in list_of_names]
+        )  # Return list of documents
+    else:  # Nothing uploaded
         return ""
 
 
-#     return output
 """ End of Callbacks"""
 
 if __name__ == "__main__":
-    # app.run_server(debug=True)  # change debug to true when developing
-    app.run_server(host="0.0.0.0", port=80)
+    app.run_server(debug=True)  # change debug to true when developing
+    # app.run_server(host="0.0.0.0", port=80)
 
